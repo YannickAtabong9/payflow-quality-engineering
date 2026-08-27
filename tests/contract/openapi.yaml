@@ -1,0 +1,222 @@
+openapi: 3.0.3
+info:
+  title: PayFlow API
+  version: 1.0.0
+  description: Payment Quality Engineering API
+
+servers:
+  - url: http://127.0.0.1:3000
+
+paths:
+  /health:
+    get:
+      summary: Check API health
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: payflow-api
+
+  /payments:
+    post:
+      summary: Create a payment
+      parameters:
+        - name: idempotency-key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentRequest"
+      responses:
+        "201":
+          description: Payment created
+          headers:
+            Location:
+              description: URL of the newly created payment
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "200":
+          description: Existing idempotent payment returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Invalid request
+        "409":
+          description: Idempotency conflict
+
+  /payments/{id}:
+    get:
+      summary: Retrieve a payment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Payment not found
+
+  /payments/{id}/process:
+    post:
+      summary: Move a pending payment to processing
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment is processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Payment not found
+        "409":
+          description: Invalid payment state
+
+  /payments/{id}/complete:
+    post:
+      summary: Complete a processing payment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompletePaymentRequest"
+      responses:
+        "200":
+          description: Payment completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Invalid outcome
+        "404":
+          description: Payment not found
+        "409":
+          description: Invalid payment state
+
+  /payments/{id}/refund:
+    post:
+      summary: Refund a successful payment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment refunded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Payment not found
+        "409":
+          description: Invalid payment state
+
+components:
+  parameters:
+    PaymentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - customerEmail
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          enum:
+            - NGN
+            - USD
+            - GHS
+            - ZAR
+        customerEmail:
+          type: string
+          format: email
+
+    CompletePaymentRequest:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          enum:
+            - successful
+            - failed
+
+    Payment:
+      type: object
+      required:
+        - id
+        - reference
+        - amount
+        - currency
+        - customerEmail
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        amount:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - successful
+            - failed
+            - refunded
+        createdAt:
+          type: string
+          format: date-time

@@ -55,4 +55,10 @@ export class PaymentClient {
       },
     });
   }
+
+  async refundPayment(id: string): Promise<APIResponse> {
+    return this.request.post(`/payments/${id}/refund`, {
+      data: {},
+    });
+  }
 }

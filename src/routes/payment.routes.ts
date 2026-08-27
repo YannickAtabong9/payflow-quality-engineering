@@ -310,4 +310,63 @@ export async function paymentRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  app.post("/payments/:id/refund", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      const result = await pool.query(
+        `
+        UPDATE payments
+        SET status = 'refunded'
+        WHERE id = $1
+        AND status = 'successful'
+        RETURNING
+          id,
+          reference,
+          amount,
+          currency,
+          customer_email AS "customerEmail",
+          status,
+          created_at AS "createdAt";
+        `,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        const paymentResult = await pool.query(
+          `
+          SELECT status
+          FROM payments
+          WHERE id = $1;
+          `,
+          [id]
+        );
+
+        if (paymentResult.rows.length === 0) {
+          return reply.code(404).send({
+            error: "PAYMENT_NOT_FOUND",
+            message: "Payment not found",
+          });
+        }
+
+        return reply.code(409).send({
+          error: "INVALID_PAYMENT_STATE",
+          message: "Only successful payments can be refunded",
+          currentStatus: paymentResult.rows[0].status,
+        });
+      }
+
+      const payment: Payment = result.rows[0];
+
+      return reply.code(200).send(payment);
+    } catch (error) {
+      app.log.error(error);
+
+      return reply.code(500).send({
+        error: "INTERNAL_SERVER_ERROR",
+        message: "Failed to refund payment",
+      });
+    }
+  });
 }
