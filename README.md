@@ -200,7 +200,7 @@ Observable metrics include:
 
 ### PayFlow API Reliability Dashboard
 
-![PayFlow API Reliability Dashboard](docs/screenshots/grafana-dashboard.png)
+![PayFlow API Reliability Dashboard](docs/screenshots/grafana-payflow-dashboard.png)
 
 The Grafana dashboard provides visibility into API behavior during functional, integration, security, and performance testing, helping identify latency spikes, elevated error rates, traffic patterns, and payment activity.
 
