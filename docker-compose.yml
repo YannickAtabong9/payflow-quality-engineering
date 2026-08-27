@@ -12,5 +12,30 @@ services:
     volumes:
       - payflow_postgres_data:/var/lib/postgresql/data
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: payflow-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: payflow-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - payflow_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   payflow_postgres_data:
+  payflow_grafana_data:
