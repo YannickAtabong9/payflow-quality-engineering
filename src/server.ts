@@ -1,9 +1,48 @@
 import Fastify from "fastify";
 import { paymentRoutes } from "./routes/payment.routes";
 import { pool } from "./config/database";
+import {
+  metricsRegistry,
+  httpRequestsTotal,
+  httpRequestDuration,
+} from "./config/metrics";
 
 const app = Fastify({
   logger: true,
+});
+
+app.addHook("onRequest", async (request) => {
+  request.startTime = process.hrtime.bigint();
+});
+
+app.addHook("onResponse", async (request, reply) => {
+  const route = request.routeOptions.url ?? "unknown";
+  const statusCode = reply.statusCode.toString();
+
+  const startTime = request.startTime;
+
+  if (startTime) {
+    const durationNanoseconds =
+      process.hrtime.bigint() - startTime;
+
+    const durationSeconds =
+      Number(durationNanoseconds) / 1_000_000_000;
+
+    httpRequestDuration.observe(
+      {
+        method: request.method,
+        route,
+        status_code: statusCode,
+      },
+      durationSeconds
+    );
+  }
+
+  httpRequestsTotal.inc({
+    method: request.method,
+    route,
+    status_code: statusCode,
+  });
 });
 
 app.get("/health", async () => {
@@ -30,6 +69,12 @@ app.get("/health/db", async (_request, reply) => {
       database: "disconnected",
     });
   }
+});
+
+app.get("/metrics", async (_request, reply) => {
+  reply.header("Content-Type", metricsRegistry.contentType);
+
+  return metricsRegistry.metrics();
 });
 
 app.register(paymentRoutes);

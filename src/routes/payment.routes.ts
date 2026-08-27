@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { pool } from "../config/database";
 import { Payment } from "../types/payment";
 import { createPaymentSchema } from "../schemas/payment.schema";
+import { paymentsCreatedTotal } from "../config/metrics";
 
 type PaymentOutcome = "successful" | "failed";
 
@@ -91,6 +92,10 @@ export async function paymentRoutes(app: FastifyInstance) {
 
       if (insertResult.rows.length > 0) {
         const payment: Payment = insertResult.rows[0];
+
+        paymentsCreatedTotal.inc({
+          status: "created",
+        });
 
         return reply.code(201).send(payment);
       }
