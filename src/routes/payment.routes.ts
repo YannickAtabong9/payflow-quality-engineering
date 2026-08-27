@@ -22,7 +22,17 @@ const createRequestHash = (
 };
 
 export async function paymentRoutes(app: FastifyInstance) {
-  app.post("/payments", async (request, reply) => {
+  app.post(
+    "/payments",
+    {
+      config: {
+        rateLimit: {
+          max: 100,
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    async (request, reply) => {
     const result = createPaymentSchema.safeParse(request.body);
 
     if (!result.success) {
@@ -145,7 +155,8 @@ export async function paymentRoutes(app: FastifyInstance) {
         message: "Failed to create payment",
       });
     }
-  });
+    }
+  );
 
   app.get("/payments/:id", async (request, reply) => {
     const { id } = request.params as { id: string };

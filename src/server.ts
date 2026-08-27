@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { paymentRoutes } from "./routes/payment.routes";
 import { pool } from "./config/database";
 import {
@@ -6,6 +7,12 @@ import {
   httpRequestsTotal,
   httpRequestDuration,
 } from "./config/metrics";
+
+declare module "fastify" {
+  interface FastifyRequest {
+    startTime?: bigint;
+  }
+}
 
 const app = Fastify({
   logger: true,
@@ -43,6 +50,17 @@ app.addHook("onResponse", async (request, reply) => {
     route,
     status_code: statusCode,
   });
+});
+
+app.register(rateLimit, {
+  global: false,
+
+  keyGenerator: (request) => {
+    return (
+      (request.headers["x-rate-limit-key"] as string) ||
+      request.ip
+    );
+  },
 });
 
 app.get("/health", async () => {
