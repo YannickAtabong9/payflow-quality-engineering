@@ -1,4 +1,5 @@
 import { APIRequestContext, APIResponse } from "@playwright/test";
+import crypto from "crypto";
 
 export interface CreatePaymentRequest {
   amount: number;
@@ -17,13 +18,19 @@ export interface PaymentResponse {
 }
 
 export class PaymentClient {
-  constructor(private readonly request: APIRequestContext) {}
+  private readonly rateLimitKey: string;
+
+  constructor(private readonly request: APIRequestContext) {
+    this.rateLimitKey = `playwright-${crypto.randomUUID()}`;
+  }
 
   async createPayment(
     data: CreatePaymentRequest,
     idempotencyKey?: string
   ): Promise<APIResponse> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      "X-Rate-Limit-Key": this.rateLimitKey,
+    };
 
     if (idempotencyKey) {
       headers["Idempotency-Key"] = idempotencyKey;
