@@ -187,16 +187,22 @@ payflow_http_request_duration_seconds
 payflow_payments_created_total
 ```
 
-Prometheus collects application metrics while Grafana can be used to visualize API health and performance.
+Prometheus collects application metrics while Grafana provides visualization of API reliability and performance.
 
 Observable metrics include:
 
 - API request rate
 - HTTP error rate
-- Request latency
+- p95 API latency
 - Payment creation rate
 - Requests by HTTP status
 - Request rate by endpoint
+
+### PayFlow API Reliability Dashboard
+
+![PayFlow API Reliability Dashboard](docs/screenshots/grafana-dashboard.png)
+
+The Grafana dashboard provides visibility into API behavior during functional, integration, security, and performance testing, helping identify latency spikes, elevated error rates, traffic patterns, and payment activity.
 
 ## CI/CD Quality Gate
 
@@ -244,6 +250,9 @@ On test failure, CI uploads Playwright reports and API logs as artifacts to supp
 ├── .github/
 │   └── workflows/
 │       └── quality-gate.yml
+├── docs/
+│   └── screenshots/
+│       └── grafana-dashboard.png
 ├── monitoring/
 │   └── prometheus/
 │       └── prometheus.yml
