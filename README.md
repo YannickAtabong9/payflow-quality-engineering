@@ -12,22 +12,9 @@
 
 PayFlow is a production-style payment API built to demonstrate how quality engineering can be embedded throughout the software delivery lifecycle rather than treated as an end-stage testing activity.
 
-The platform supports:
-
-* Payment creation and retrieval
-* Payment processing and completion
-* Failed payment states
-* Refund workflows
-* Idempotency protection
-* Concurrent request handling
-* PostgreSQL persistence
-* API rate limiting
-* Prometheus metrics
-* Grafana observability
+The platform supports payment creation and retrieval, processing and completion, failed payment states, refunds, idempotency protection, concurrent request handling, PostgreSQL persistence, API rate limiting, and operational monitoring.
 
 The project focuses particularly on problems that matter in payment systems: **transaction integrity, duplicate-payment prevention, valid state transitions, persistence correctness, API reliability, and controlled failure behavior.**
-
----
 
 ## Engineering Highlights
 
@@ -43,8 +30,6 @@ The project focuses particularly on problems that matter in payment systems: **t
 | **Observability**           | Prometheus metrics and Grafana reliability dashboard                  |
 | **CI/CD**                   | Live GitHub Actions quality gate                                      |
 | **Environment**             | Reproducible Docker/PostgreSQL setup                                  |
-
----
 
 ## System Architecture
 
@@ -74,11 +59,9 @@ The project focuses particularly on problems that matter in payment systems: **t
                                    └─────────────────┘
 ```
 
-GitHub Actions provides the automated CI quality gate around the application, database initialization and test suite.
+GitHub Actions provides the automated CI quality gate around the application, database initialization, and test suite.
 
----
-
-# Quality Engineering Strategy
+## Quality Engineering Strategy
 
 PayFlow uses a layered quality engineering approach rather than relying only on endpoint-level positive testing.
 
@@ -101,9 +84,7 @@ PayFlow uses a layered quality engineering approach rather than relying only on 
                  API Automation
 ```
 
-This allows failures to be detected across API behavior, contracts, persistent state, security controls and runtime reliability.
-
----
+This allows failures to be detected across API behavior, contracts, persistent state, security controls, and runtime reliability.
 
 ## 1. Payment Lifecycle & State Integrity
 
@@ -124,24 +105,20 @@ successful
 refunded
 ```
 
-Automated tests verify both valid workflows and invalid state transitions.
+Automated tests validate both successful workflows and invalid state transitions, including:
 
-Coverage includes:
-
-* Creating payments in the expected initial state
+* Payment creation in the expected initial state
 * Processing pending payments
 * Completing eligible payments
-* Handling failed payment paths
-* Refunding successful payments
-* Rejecting invalid refund attempts
-* Preventing unsupported state transitions
-* Verifying persistent state after API operations
+* Failed payment paths
+* Successful refunds
+* Invalid refund attempts
+* Unsupported state transitions
+* Persistent state after API operations
 
-Payment correctness depends not only on endpoint availability, but also on maintaining valid transaction state throughout the lifecycle.
+This ensures payment correctness is validated beyond HTTP responses and across the transaction lifecycle.
 
----
-
-## 2. Idempotency & Duplicate Transaction Protection
+## 2. Idempotency & Concurrency Testing
 
 Duplicate transaction prevention is one of the central engineering scenarios in PayFlow.
 
@@ -165,11 +142,11 @@ idempotency_key
 request_hash
 ```
 
-This allows PayFlow to distinguish legitimate request retries from conflicting reuse of an existing idempotency key.
+This allows PayFlow to distinguish legitimate retries from conflicting reuse of an existing idempotency key.
 
-### Concurrent Request Testing
+### Concurrent Request Validation
 
-The suite sends simultaneous identical payment requests and validates the resulting persistent state.
+The test suite sends simultaneous identical payment requests and validates the resulting persistent state:
 
 ```text
 Multiple concurrent requests
@@ -184,9 +161,7 @@ Multiple concurrent requests
    One payment record
 ```
 
-This tests race-condition and duplicate-transaction behavior that standard sequential API automation can easily miss.
-
----
+This validates race-condition and duplicate-transaction behavior that sequential API testing can miss.
 
 ## 3. API Functional Testing
 
@@ -204,29 +179,15 @@ POST /payments/:id/complete
 POST /payments/:id/refund
 ```
 
-Coverage includes:
+Coverage includes positive and negative scenarios, payment creation and retrieval, processing, completion, refunds, invalid identifiers, state transitions, input validation, and end-to-end payment flows.
 
-* Positive scenarios
-* Negative scenarios
-* Payment creation
-* Payment retrieval
-* Payment processing
-* Payment completion
-* Refund workflows
-* Invalid identifiers
-* Invalid state transitions
-* Input validation
-* End-to-end payment flows
-
-Reusable API clients, test-data factories and helpers keep the automation maintainable as coverage grows.
-
----
+Reusable API clients, test-data factories, and helpers keep the automation maintainable as coverage grows.
 
 ## 4. Database Validation
 
 API responses alone do not prove that a payment system persisted the correct state.
 
-PayFlow tests therefore query PostgreSQL directly after selected API operations.
+PayFlow tests query PostgreSQL directly after selected API operations.
 
 The payment model contains:
 
@@ -245,16 +206,13 @@ request_hash
 Database assertions validate:
 
 * Record creation
-* Payment status
-* Payment references
+* Payment status and references
 * Stored request data
 * Idempotency persistence
 * Duplicate-record prevention
 * State changes following API operations
 
-Database initialization is reproducible so the required schema can be created consistently in local development and clean CI environments.
-
----
+Database initialization is reproducible so the required schema can be created consistently in both local development and clean CI environments.
 
 ## 5. API Contract Testing
 
@@ -264,16 +222,9 @@ The API contract is defined using OpenAPI:
 tests/contract/openapi.yaml
 ```
 
-Contract validation uses:
+Contract validation uses **Swagger Parser** and **Ajv**.
 
-* **Swagger Parser**
-* **Ajv**
-
-Tests validate the OpenAPI specification and verify actual API responses against the defined contract.
-
-This creates an additional quality layer between implementation behavior and consumer expectations.
-
----
+Tests validate the OpenAPI specification and verify actual API responses against the defined contract, providing an additional quality layer between implementation behavior and consumer expectations.
 
 ## 6. Security-Focused Quality Engineering
 
@@ -282,8 +233,7 @@ Security testing is incorporated into the automated quality strategy rather than
 Coverage includes:
 
 * API rate-limit enforcement
-* Negative amount validation
-* Zero amount validation
+* Negative and zero amount validation
 * Decimal amount rejection
 * Type manipulation
 * Unsupported currency validation
@@ -298,7 +248,7 @@ Coverage includes:
 
 The `/payments` endpoint implements API rate limiting.
 
-Automated tests deliberately exceed the configured request threshold and verify:
+Automated tests deliberately exceed the configured threshold and verify:
 
 ```http
 429 Too Many Requests
@@ -306,22 +256,16 @@ Automated tests deliberately exceed the configured request threshold and verify:
 
 This validates both standard API behavior and abuse-control behavior.
 
----
-
 ## 7. Performance Engineering
 
 Performance testing is implemented using **k6**.
-
-Test scenarios include:
 
 ```text
 tests/performance/payment-creation.js
 tests/performance/payment-load.js
 ```
 
-The project includes baseline and load-testing scenarios scaling traffic up to:
-
-**100 virtual users**
+The project includes baseline and load scenarios scaling traffic up to **100 virtual users**.
 
 Configured performance thresholds include:
 
@@ -331,7 +275,7 @@ p95 latency < 500 ms
 p99 latency < 1000 ms
 ```
 
-These thresholds convert performance expectations into measurable pass/fail criteria instead of relying only on manual interpretation.
+These thresholds convert performance expectations into measurable pass/fail criteria.
 
 Detailed performance results are maintained in:
 
@@ -339,11 +283,9 @@ Detailed performance results are maintained in:
 tests/performance/performance-report.md
 ```
 
----
-
 ## 8. Observability & Reliability
 
-PayFlow exposes Prometheus-compatible application metrics through:
+PayFlow exposes Prometheus-compatible metrics through:
 
 ```http
 GET /metrics
@@ -357,9 +299,7 @@ payflow_http_request_duration_seconds
 payflow_payments_created_total
 ```
 
-Prometheus collects runtime metrics while Grafana visualizes API reliability, performance and payment activity.
-
-The dashboard tracks:
+Prometheus collects runtime metrics while Grafana provides visibility into:
 
 * API request rate
 * HTTP error rate
@@ -372,23 +312,11 @@ The dashboard tracks:
 
 ![PayFlow API Reliability Dashboard](docs/screenshots/grafana-payflow-dashboard.png)
 
-The Grafana dashboard provides visibility into application behavior during functional, integration, security and performance testing.
-
-It helps correlate test activity with:
-
-* Latency changes
-* Elevated error rates
-* Request volume
-* Endpoint traffic
-* Payment activity
-
----
+The dashboard helps correlate functional, integration, security, and performance testing with latency, errors, traffic patterns, and payment activity.
 
 ## 9. CI/CD Quality Gate
 
-The live GitHub Actions quality gate automatically validates PayFlow when repository changes are introduced.
-
-The workflow performs:
+The **live GitHub Actions quality gate** automatically validates PayFlow when repository changes are introduced.
 
 ```text
 Checkout Repository
@@ -423,18 +351,16 @@ Run Automated Test Suite
 
 A successful pipeline verifies that:
 
-* The project can be initialized in a clean CI environment
+* The project initializes in a clean CI environment
 * PostgreSQL starts and initializes successfully
-* The TypeScript application builds successfully
+* The TypeScript application builds
 * The PayFlow API starts correctly
 * The API reaches a healthy state
-* The automated quality suite passes
+* The complete automated quality suite passes
 
-When tests fail, CI uploads Playwright reports and API logs as artifacts to support failure investigation.
+When tests fail, CI uploads **Playwright reports and API logs as artifacts** to support investigation.
 
-The live status of this pipeline is displayed at the top of this README through the **PayFlow Quality Gate** badge.
-
----
+The current workflow status is displayed by the **PayFlow Quality Gate** badge at the top of this README and links directly to the GitHub Actions workflow.
 
 ## Automated Test Coverage
 
@@ -453,8 +379,6 @@ The current Playwright suite contains **38 automated tests** covering:
 * Secure error handling
 * End-to-end integration testing
 
----
-
 ## Tech Stack
 
 | Category             | Technologies                           |
@@ -466,8 +390,6 @@ The current Playwright suite contains **38 automated tests** covering:
 | **Performance**      | k6                                     |
 | **Observability**    | Prometheus, Grafana, prom-client       |
 | **DevOps**           | Docker, Docker Compose, GitHub Actions |
-
----
 
 ## Project Structure
 
@@ -484,15 +406,9 @@ The current Playwright suite contains **38 automated tests** covering:
 │       └── prometheus.yml
 ├── src/
 │   ├── config/
-│   │   ├── database.ts
-│   │   ├── init-db.ts
-│   │   └── metrics.ts
 │   ├── routes/
-│   │   └── payment.routes.ts
 │   ├── schemas/
-│   │   └── payment.schema.ts
 │   ├── types/
-│   │   └── payment.ts
 │   └── server.ts
 ├── tests/
 │   ├── api/
@@ -509,13 +425,9 @@ The current Playwright suite contains **38 automated tests** covering:
 └── tsconfig.json
 ```
 
----
+## Running PayFlow Locally
 
-# Running PayFlow Locally
-
-## Prerequisites
-
-Ensure the following are installed:
+### Prerequisites
 
 * Node.js
 * Docker
@@ -561,8 +473,6 @@ http://127.0.0.1:3000
 
 ### 6. Run the Automated Test Suite
 
-In another terminal:
-
 ```bash
 npm test
 ```
@@ -573,23 +483,19 @@ npm test
 npx playwright show-report
 ```
 
----
-
 ## Running Performance Tests
 
-### Baseline
+Baseline:
 
 ```bash
 k6 run tests/performance/payment-creation.js
 ```
 
-### Load Test
+Load test:
 
 ```bash
 k6 run tests/performance/payment-load.js
 ```
-
----
 
 ## Monitoring
 
@@ -601,27 +507,23 @@ Prometheus    http://localhost:9090
 Grafana       http://localhost:3001
 ```
 
----
-
 ## What This Project Demonstrates
 
 PayFlow demonstrates practical experience with:
 
-* Designing an API-first automation strategy
-* Testing financial transaction state and integrity
-* Building reusable Playwright API automation
-* Testing idempotency and concurrent requests
-* Validating persistent database state
-* Automating API contract validation
-* Incorporating security testing into standard QA
-* Defining measurable performance thresholds
-* Instrumenting an API with Prometheus metrics
-* Building Grafana reliability dashboards
-* Creating reproducible Docker-based test environments
-* Implementing automated CI/CD quality gates
-* Capturing test artifacts for failure investigation
-
----
+* API-first test automation
+* Payment transaction integrity testing
+* Playwright API automation architecture
+* Idempotency and concurrency testing
+* PostgreSQL state validation
+* API contract testing
+* Security-focused QA
+* Performance engineering
+* Prometheus-based observability
+* Grafana reliability dashboards
+* Reproducible Docker environments
+* CI/CD quality gates
+* Automated failure artifact collection
 
 ## Author
 
